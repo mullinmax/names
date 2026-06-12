@@ -22,6 +22,7 @@ export function lineChart(container, opts = {}) {
   const yAxisG = g.append('g').attr('class', 'axis');
   const lineLayer = g.append('g');
   const labelLayer = g.append('g');
+  const endLabelLayer = g.append('g');
   const hoverRule = g.append('line')
     .attr('stroke', 'var(--faint)').attr('stroke-dasharray', '3 3')
     .attr('y1', 0).attr('y2', ih).style('opacity', 0);
@@ -34,6 +35,7 @@ export function lineChart(container, opts = {}) {
   const y = d3.scaleLinear().range([ih, 0]).nice();
   let series = [];
   let yLabel = opts.yLabel || '';
+  let xFmt = null;
   const yFmt = v => (v >= 10000 ? d3.format('.2s')(v) : fmt(Math.round(v * 10) / 10));
 
   const yLabelText = g.append('text')
@@ -51,6 +53,7 @@ export function lineChart(container, opts = {}) {
 
   function update(newSeries, o = {}) {
     series = newSeries.filter(s => s.values.some(v => v.y));
+    if (o.xTickFormat !== undefined) xFmt = o.xTickFormat;
     if (o.yLabel !== undefined) yLabel = o.yLabel;
     yLabelText.text(yLabel);
 
@@ -63,7 +66,8 @@ export function lineChart(container, opts = {}) {
     const t = svg.transition().duration(dur).ease(d3.easeCubicInOut);
 
     xAxisG.transition(t).call(
-      d3.axisBottom(x).ticks(Math.min(10, iw / 80)).tickFormat(d3.format('d')).tickSizeOuter(0));
+      d3.axisBottom(x).ticks(Math.min(10, iw / 80))
+        .tickFormat(o.xTickFormat || d3.format('d')).tickSizeOuter(0));
     yAxisG.transition(t).call(
       d3.axisLeft(y).ticks(6).tickFormat(yFmt).tickSizeOuter(0));
     gridLayer.selectAll('line').data(y.ticks(6)).join('line')
@@ -118,6 +122,17 @@ export function lineChart(container, opts = {}) {
           .text(d.label)
           .transition(t).attr('y', y(d.y) - 5);
       });
+
+    // big labels pinned to the top/bottom of the y axis (e.g. ♀ / ♂ poles)
+    endLabelLayer.selectAll('text')
+      .data(o.yEndLabels || [], d => d.pos)
+      .join('text')
+      .attr('class', 'line-label')
+      .attr('x', 8)
+      .attr('y', d => d.pos === 'top' ? 18 : ih - 8)
+      .attr('font-size', 15)
+      .attr('fill', d => d.color || 'var(--muted)')
+      .text(d => d.text);
 
     // lines: morph existing, draw-in new
     lineLayer.selectAll('path.series')
@@ -200,7 +215,7 @@ export function lineChart(container, opts = {}) {
         .attr('cx', x(xv)).attr('cy', d => y(d.y));
       const fmtv = opts.tooltipFormat || (v => fmt1(v));
       showTooltip(
-        `<div class="tt-title">${xv}</div>` +
+        `<div class="tt-title">${xFmt ? xFmt(xv) : xv}</div>` +
         rows.slice(0, 12).map(r =>
           `<div class="tt-row"><span><span class="sw" style="background:${r.color}"></span>${r.label}</span><span>${fmtv(r.y)}</span></div>`
         ).join('') +

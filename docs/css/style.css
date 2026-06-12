@@ -84,6 +84,23 @@ body {
 }
 .tabs a:hover { color: var(--ink); }
 .tabs a.active { color: var(--ink); border-bottom-color: var(--accent); }
+.nav-lists {
+  margin-left: auto;
+  align-self: center;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 5px 12px;
+  margin-bottom: 4px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.nav-lists:hover { border-color: var(--accent); background: var(--accent-soft); }
 
 /* ---- layout ---- */
 .page {
@@ -377,13 +394,96 @@ select.dropdown, input.year-input {
 .wonder-card .w-year { color: var(--accent); font-weight: 700; font-size: 13px; }
 .wonder-card .w-note { font-size: 12px; color: var(--muted); font-style: italic; min-height: 32px; margin: 2px 0 4px; }
 
-.decade-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
-.decade-strip button {
-  border: 1px solid var(--line); background: var(--panel); border-radius: 8px;
-  padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 650; color: var(--muted);
-  cursor: pointer; transition: all .15s;
+.decade-slider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 12px 18px;
+  max-width: 560px;
 }
-.decade-strip button.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+.decade-slider input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+  min-width: 160px;
+}
+.decade-slider .ds-end { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.decade-slider .ds-value {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+  min-width: 64px;
+  text-align: right;
+  color: var(--accent);
+}
+
+/* ---- lists manager dialog ---- */
+dialog.lists-dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 20px 22px;
+  width: min(680px, calc(100vw - 32px));
+  max-height: min(80vh, 720px);
+  box-shadow: 0 16px 60px rgba(40, 32, 16, .25);
+}
+dialog.lists-dialog::backdrop { background: rgba(31, 29, 24, .45); }
+.lists-dialog .ld-head { display: flex; align-items: baseline; justify-content: space-between; }
+.lists-dialog .ld-head h2 { font-family: var(--serif); font-size: 22px; margin: 0; }
+.lists-dialog .ld-close {
+  border: 0; background: none; font-size: 24px; line-height: 1;
+  color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 6px;
+}
+.lists-dialog .ld-close:hover { color: var(--accent); }
+.lists-dialog .ld-hint { color: var(--muted); font-size: 13px; margin: 6px 0 14px; }
+.lists-dialog .ld-body { display: flex; flex-direction: column; gap: 8px; }
+.lists-dialog .ld-foot {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line);
+}
+.lists-dialog .ld-spacer { flex: 1; }
+.lists-dialog .ld-newname {
+  font: inherit; font-size: 13px; padding: 6px 10px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--panel);
+}
+.list-row { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+.list-row.active { border-color: var(--accent); }
+.list-row-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.list-row .list-name {
+  border: 0; background: none; font: inherit; font-size: 14.5px; font-weight: 650;
+  color: var(--ink); cursor: pointer; padding: 4px 2px; text-align: left; flex: 1; min-width: 140px;
+}
+.list-row .list-name:hover { color: var(--accent); }
+.list-row .list-count { color: var(--faint); font-size: 12px; font-weight: 400; margin-left: 6px; }
+.list-row .list-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.list-row .list-actions button:disabled { color: var(--accent); border-color: var(--accent-soft); cursor: default; }
+.btn-quiet.danger:hover { color: #a23232; border-color: #a23232; }
+.list-row .chips { margin-top: 8px; box-shadow: none; }
+
+.namebox-titlewrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ---- letters page ---- */
+.letter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 12px; }
+.letter-card { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 6px; }
+.letter-card .lc-head { display: flex; justify-content: space-between; align-items: baseline; }
+.letter-card .lc-letter { font-family: var(--serif); font-weight: 700; font-size: 19px; }
+.letter-card .lc-now { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.letter-card .lc-meta { font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+/* ---- guess who page ---- */
+.who-search { display: flex; gap: 10px; flex-wrap: wrap; }
+.who-search input { flex: 1; min-width: 200px; font-size: 16px; }
+.stat-row { display: flex; gap: 28px; flex-wrap: wrap; margin-top: 14px; }
+.stat-block { flex: 1; min-width: 180px; }
+.stat-block .footnote { margin-top: 2px; }
+.who-topstates { margin: 12px 0 0; padding-left: 22px; font-size: 13.5px; color: var(--muted); }
+.who-topstates li { margin: 2px 0; }
 
 .footnote { color: var(--faint); font-size: 12.5px; margin-top: 10px; }
 .footer {

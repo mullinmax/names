@@ -1,6 +1,7 @@
-// Shared UI helpers: toast, tooltip, segmented controls, the name-chips editor.
+// Shared UI helpers: toast, tooltip, segmented controls, the name-list
+// chips editor, and the global lists-manager dialog.
 import * as store from './store.js';
-import { nameExists, getTop } from './data.js';
+import { nameExists } from './data.js';
 
 export const SEX_LABEL = { F: 'Girls', M: 'Boys', B: 'Both' };
 export const SEX_COLOR = { F: 'var(--girl)', M: 'var(--boy)', B: 'var(--both)' };
@@ -17,6 +18,9 @@ export function titleCase(s) {
   s = s.trim();
   return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : '';
 }
+
+const esc = s => String(s).replace(/[&<>"]/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export const fmt = d3.format(',');
 export const fmt1 = d3.format(',.1f');
@@ -90,76 +94,24 @@ export function controlGroup(label, el) {
   return wrap;
 }
 
-/**
- * The shared "your names" chips editor. Persists via store; re-renders itself
- * on store changes. opts: {hint, showSwatches}
- */
-export function nameChips(opts = {}) {
-  const root = document.createElement('div');
-  root.className = 'namebox';
+/* ---------------- name-list chips ---------------- */
 
-  const head = document.createElement('div');
-  head.className = 'namebox-head';
-  head.innerHTML = `<span class="namebox-title">Your name list</span>
-    <span class="namebox-hint">${opts.hint || 'Type a name and press Enter — your list follows you across every tab.'}</span>`;
-
-  const box = document.createElement('div');
-  box.className = 'chips';
+// A chips editor bound to one list (getId is read at event time so the box
+// can follow the active list). Returns {root, render}.
+function chipsBox(getId, opts = {}) {
+  const root = el('div');
+  const box = el('div', 'chips');
   const input = document.createElement('input');
   input.placeholder = 'Add a name…';
   input.autocapitalize = 'words';
-
-  const actions = document.createElement('div');
-  actions.className = 'chips-actions';
-  const select = document.createElement('select');
-  select.className = 'dropdown';
-  select.innerHTML = '<option value="">Load a curated list…</option>' +
-    Object.keys(store.CURATED_LISTS).map(k => `<option>${k}</option>`).join('');
-  select.onchange = async () => {
-    const key = select.value;
-    select.value = '';
-    if (!key) return;
-    let names = store.CURATED_LISTS[key];
-    if (!names) { // “Today’s top 10” — resolved from data
-      const top = await getTop();
-      const years = Object.keys(top.F).map(Number);
-      const latest = String(Math.max(...years));
-      names = [...top.F[latest].slice(0, 5), ...top.M[latest].slice(0, 5)].map(d => d[0]);
-    }
-    store.setNames(names);
-  };
-  const clearBtn = document.createElement('button');
-  clearBtn.className = 'btn-quiet';
-  clearBtn.textContent = 'Clear list';
-  clearBtn.onclick = () => store.setNames([]);
-  actions.append(select, clearBtn);
-
-  function render() {
-    box.querySelectorAll('.chip').forEach(c => c.remove());
-    const names = store.getNames();
-    names.forEach((name, i) => {
-      const chip = document.createElement('span');
-      chip.className = 'chip';
-      if (opts.showSwatches !== false) {
-        const sw = document.createElement('span');
-        sw.className = 'swatch';
-        sw.style.background = colorFor(i);
-        chip.appendChild(sw);
-      }
-      chip.appendChild(document.createTextNode(name));
-      const x = document.createElement('button');
-      x.textContent = '×';
-      x.setAttribute('aria-label', `Remove ${name}`);
-      x.onclick = () => store.removeName(name);
-      chip.appendChild(x);
-      box.insertBefore(chip, input);
-    });
-  }
+  box.appendChild(input);
 
   input.addEventListener('keydown', async e => {
+    const id = getId();
+    const list = store.getList(id);
+    if (!list) return;
     if (e.key === 'Backspace' && !input.value) {
-      const names = store.getNames();
-      if (names.length) store.removeName(names[names.length - 1]);
+      if (list.names.length) store.setListNames(id, list.names.slice(0, -1));
       return;
     }
     if (e.key !== 'Enter' && e.key !== ',') return;
@@ -167,28 +119,192 @@ export function nameChips(opts = {}) {
     const name = titleCase(input.value);
     if (!name) return;
     input.value = '';
-    if (store.getNames().includes(name)) { toast(`${name} is already in your list`); return; }
+    if (list.names.includes(name)) { toast(`${name} is already in “${list.name}”`); return; }
     if (!(await nameExists(name))) { toast(`“${name}” isn’t in the SSA database (1880–2025)`); return; }
-    store.addName(name);
+    const fresh = store.getList(id);
+    if (fresh) store.setListNames(id, [...fresh.names, name]);
   });
 
-  box.appendChild(input);
-  root.append(head, box, actions);
+  function render() {
+    box.querySelectorAll('.chip').forEach(c => c.remove());
+    const list = store.getList(getId());
+    (list ? list.names : []).forEach((name, i) => {
+      const chip = el('span', 'chip');
+      if (opts.showSwatches !== false) {
+        const sw = el('span', 'swatch');
+        sw.style.background = colorFor(i);
+        chip.appendChild(sw);
+      }
+      chip.appendChild(document.createTextNode(name));
+      const x = document.createElement('button');
+      x.textContent = '×';
+      x.setAttribute('aria-label', `Remove ${name}`);
+      x.onclick = () => {
+        const l = store.getList(getId());
+        if (l) store.setListNames(l.id, l.names.filter(n => n !== name));
+      };
+      chip.appendChild(x);
+      box.insertBefore(chip, input);
+    });
+  }
+
+  root.append(box);
+  render();
+  return { root, render };
+}
+
+/**
+ * The shared "name list" component pages embed: shows which list is active,
+ * lets you switch lists, edit the active list's names, and open the manager.
+ * opts: {hint, showSwatches}
+ */
+export function nameChips(opts = {}) {
+  const root = el('div', 'namebox');
+
+  const head = el('div', 'namebox-head');
+  const left = el('div', 'namebox-titlewrap');
+  const title = el('span', 'namebox-title', 'Name list');
+  const select = document.createElement('select');
+  select.className = 'dropdown';
+  select.title = 'Switch the active list';
+  select.onchange = () => store.setActive(select.value);
+  const manage = el('button', 'btn-quiet', 'Manage lists…');
+  manage.onclick = openListsManager;
+  left.append(title, select, manage);
+  const hint = el('span', 'namebox-hint',
+    opts.hint || 'Type a name and press Enter — the active list follows you across every tab.');
+  head.append(left, hint);
+
+  const editor = chipsBox(() => store.getActiveId(), opts);
+
+  const actions = el('div', 'chips-actions');
+  const clearBtn = el('button', 'btn-quiet', 'Clear list');
+  clearBtn.onclick = () => store.setNames([]);
+  actions.append(clearBtn);
+
+  function render() {
+    const lists = store.getLists();
+    select.innerHTML = lists.map(l =>
+      `<option value="${esc(l.id)}"${l.id === store.getActiveId() ? ' selected' : ''}>${esc(l.name)} (${l.names.length})</option>`).join('');
+    editor.render();
+  }
+
+  root.append(head, editor.root, actions);
   render();
   store.subscribe(render);
   return root;
 }
 
-// "+" button that adds a name to the shared list.
+/* ---------------- lists manager dialog ---------------- */
+
+let dlg = null, dlgBody = null, expandedId = null;
+
+export function openListsManager() {
+  if (!dlg) buildDialog();
+  renderDialog();
+  dlg.showModal();
+}
+
+function buildDialog() {
+  dlg = document.createElement('dialog');
+  dlg.className = 'lists-dialog';
+  dlg.innerHTML = `
+    <div class="ld-head">
+      <h2>Your name lists</h2>
+      <button class="ld-close" aria-label="Close">×</button>
+    </div>
+    <p class="ld-hint">Lists are saved in your browser and shared by every page.
+      The built-in lists (Biblical, Presidential…) are ordinary lists — edit,
+      copy, or delete them like any other. Click a list's name to edit its names.</p>
+    <div class="ld-body"></div>
+    <div class="ld-foot">
+      <input class="ld-newname" placeholder="New list name…">
+      <button class="btn-quiet ld-create">Create list</button>
+      <span class="ld-spacer"></span>
+      <button class="btn-quiet ld-restore">Restore missing built-ins</button>
+    </div>`;
+  document.body.appendChild(dlg);
+  dlgBody = dlg.querySelector('.ld-body');
+  dlg.querySelector('.ld-close').onclick = () => dlg.close();
+  dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+
+  const newInput = dlg.querySelector('.ld-newname');
+  const create = () => {
+    const name = newInput.value.trim();
+    if (!name) { toast('Give the new list a name first'); return; }
+    newInput.value = '';
+    // the store emits during createList, before we know the new id — re-render
+    // once more so the new list's editor opens
+    expandedId = store.createList(name);
+    renderDialog();
+  };
+  dlg.querySelector('.ld-create').onclick = create;
+  newInput.addEventListener('keydown', e => { if (e.key === 'Enter') create(); });
+
+  dlg.querySelector('.ld-restore').onclick = () => {
+    const n = store.restoreDefaults();
+    toast(n ? `Restored ${n} built-in list${n > 1 ? 's' : ''}` : 'All built-in lists are already here');
+  };
+
+  store.subscribePersistent(() => { if (dlg.open) renderDialog(); });
+}
+
+function renderDialog() {
+  const refocus = document.activeElement
+    && dlgBody.contains(document.activeElement)
+    && document.activeElement.matches('.chips input');
+  dlgBody.innerHTML = '';
+  for (const list of store.getLists()) {
+    const isActive = list.id === store.getActiveId();
+    const row = el('div', `list-row${isActive ? ' active' : ''}`);
+    const head = el('div', 'list-row-head');
+
+    const name = el('button', 'list-name');
+    name.innerHTML = `${esc(list.name)} <span class="list-count">${list.names.length} name${list.names.length === 1 ? '' : 's'}</span>`;
+    name.title = 'Edit the names in this list';
+    name.onclick = () => { expandedId = expandedId === list.id ? null : list.id; renderDialog(); };
+
+    const actions = el('div', 'list-actions');
+    const useBtn = el('button', 'btn-quiet', isActive ? '✓ Active' : 'Use');
+    useBtn.disabled = isActive;
+    useBtn.onclick = () => store.setActive(list.id);
+    const renameBtn = el('button', 'btn-quiet', 'Rename');
+    renameBtn.onclick = () => {
+      const nn = prompt('Rename list', list.name);
+      if (nn && nn.trim()) store.renameList(list.id, nn.trim());
+    };
+    const copyBtn = el('button', 'btn-quiet', 'Copy');
+    copyBtn.onclick = () => { expandedId = store.duplicateList(list.id); renderDialog(); };
+    const delBtn = el('button', 'btn-quiet danger', 'Delete');
+    delBtn.onclick = () => {
+      if (!list.names.length || confirm(`Delete “${list.name}” (${list.names.length} names)?`)) {
+        if (expandedId === list.id) expandedId = null;
+        store.deleteList(list.id);
+      }
+    };
+    actions.append(useBtn, renameBtn, copyBtn, delBtn);
+
+    head.append(name, actions);
+    row.append(head);
+    if (expandedId === list.id) row.append(chipsBox(() => list.id, { showSwatches: false }).root);
+    dlgBody.append(row);
+  }
+  if (refocus) dlgBody.querySelector('.list-row .chips input')?.focus();
+}
+
+/* ---------------- misc ---------------- */
+
+// "+" button that adds a name to the active list.
 export function addButton(name) {
   const b = document.createElement('button');
   b.className = 'add-mini';
   b.textContent = '+';
-  b.title = `Add ${name} to your list`;
+  b.title = `Add ${name} to your active list`;
   b.onclick = e => {
     e.stopPropagation();
-    if (store.addName(name)) toast(`Added ${name} to your list`);
-    else toast(`${name} is already in your list`);
+    const list = store.getActiveList();
+    if (store.addName(name)) toast(`Added ${name} to “${list.name}”`);
+    else toast(`${name} is already in “${list.name}”`);
   };
   return b;
 }

@@ -12,7 +12,6 @@ Outputs (docs/data/):
   states/{a-z}.json    per-name state x decade counts, sharded by first letter
   regional.json        most/least regional names per window
   migration.json       biggest centroid movers per compass direction
-  groups.json          curated thematic groups with aggregate series
   rising.json          fastest rising / falling names
   gender.json          notable gender-shift names
   decades.json         signature names per decade
@@ -55,6 +54,8 @@ STATE_CENTROIDS = {
     "WV": (38.6, -80.6), "WI": (44.6, -89.7), "WY": (43.0, -107.6),
 }
 STATES = sorted(STATE_CENTROIDS)
+# Maps and the regional/migration stats cover the continental US only.
+CONT_STATES = [s for s in STATES if s not in ("AK", "HI")]
 
 
 def dump(name, obj):
@@ -171,30 +172,56 @@ print("Computing regionality...")
 
 
 def regional_lists(dec_lo, dec_hi):
-    """TVD between a name's state distribution and the baseline birth distribution."""
+    """TVD between a name's state distribution and the baseline birth
+    distribution, over the continental US (lower 48 + DC).
+
+    The SSA censors state counts under 5 per year, so a thin name can look
+    intensely "regional" just because it cleared the bar in one state. To keep
+    the signal-to-noise ratio high we assume every state hides counts just
+    under the reporting minimum (4 per year the name was nationally active),
+    add those phantom counts in before scoring, and drop any name whose real
+    counts don't outweigh the worst-case phantom mass.
+    """
+    yr_lo = 1910 + dec_lo * 10
+    yr_hi = min(YEAR_MAX, 1910 + dec_hi * 10 - 1)
+    i_lo, i_hi = yr_lo - YEAR_MIN, yr_hi - YEAR_MIN + 1
     out = {}
     for sexes in (("F",), ("M",), ("F", "M")):
         key = "A" if len(sexes) == 2 else sexes[0]
         base = {s: sum(state_dec_totals[s][sx][di]
                        for sx in sexes for di in range(dec_lo, dec_hi))
-                for s in STATES}
+                for s in CONT_STATES}
         base_total = sum(base.values())
         baseq = {s: v / base_total for s, v in base.items()}
         scored = []
         for name, sx_data in st.items():
-            counts = {s: 0 for s in STATES}
+            counts = {s: 0 for s in CONT_STATES}
             total = 0
             for sx in sexes:
                 for state, arr in sx_data.get(sx, {}).items():
+                    if state not in baseq:
+                        continue
                     v = sum(arr[dec_lo:dec_hi])
                     counts[state] += v
                     total += v
             if total < 3000:
                 continue
-            tvd = sum(abs(counts[s] / total - baseq[s]) for s in STATES) / 2
-            top_state = max(STATES, key=lambda s: (counts[s] / total) / max(baseq[s], 1e-9))
-            lq = (counts[top_state] / total) / max(baseq[top_state], 1e-9)
-            scored.append((tvd, name, total, top_state, lq))
+            # phantom counts: 4 per state per year the name was nationally active
+            nat = natl.get(name, {})
+            active_years = sum(
+                1 for yi in range(i_lo, i_hi)
+                if any(nat.get(sx) and nat[sx][yi] for sx in sexes))
+            hidden = 4 * active_years
+            if total < hidden * len(CONT_STATES):  # signal must outweigh worst-case noise
+                continue
+            sm_total = total + hidden * len(CONT_STATES)
+            tvd = sum(abs((counts[s] + hidden) / sm_total - baseq[s]) for s in CONT_STATES) / 2
+            lq_of = lambda s: ((counts[s] + hidden) / sm_total) / max(baseq[s], 1e-9)
+            # the hotspot must have real counts above the phantom noise floor,
+            # otherwise a zero-count tiny state can "win" on phantoms alone
+            candidates = [s for s in CONT_STATES if counts[s] >= hidden] or CONT_STATES
+            top_state = max(candidates, key=lq_of)
+            scored.append((tvd, name, total, top_state, lq_of(top_state)))
         scored.sort(reverse=True)
         fmt = lambda t: [{"name": n, "tvd": round(v, 4), "total": tot,
                           "topState": ts, "lq": round(l, 2)} for v, n, tot, ts, l in t]
@@ -210,10 +237,13 @@ print("Computing migration...")
 
 
 def centroid(name, sex, di):
-    """Per-capita-rate-weighted centroid of a name in a decade. None if thin."""
+    """Per-capita-rate-weighted centroid of a name in a decade, over the
+    continental US. None if thin."""
     wsum = la = lo = 0.0
     n = 0
     for state, arr in st[name].get(sex, {}).items():
+        if state in ("AK", "HI"):
+            continue
         tot = state_dec_totals[state][sex][di]
         if not tot or not arr[di]:
             continue
@@ -261,94 +291,6 @@ mig_out["stable"] = sorted(
     (m for m in migration if m["total"] > 100000),
     key=lambda m: math.hypot(m["dLat"], m["dLon"]))[:30]
 dump("migration.json", mig_out)
-
-# ---------------------------------------------------------------- groups
-print("Computing curated groups...")
-GROUPS = {
-    "biblical": {
-        "label": "Biblical",
-        "blurb": "Names drawn from the Old and New Testaments.",
-        "names": """Mary Elizabeth Sarah Rebecca Rachel Ruth Hannah Leah Esther Naomi
-            Abigail Deborah Eve Delilah Miriam Martha Judith Tabitha Phoebe Lydia
-            Priscilla Joanna Dinah Michael David James John Matthew Mark Luke Paul
-            Peter Andrew Thomas Joseph Daniel Samuel Benjamin Jacob Joshua Caleb
-            Aaron Adam Noah Abraham Isaac Elijah Isaiah Jeremiah Ezekiel Jonah Levi
-            Simon Stephen Philip Timothy Titus Silas Gabriel Nathaniel Nathan Solomon
-            Gideon Ezra Asher Eli Seth Reuben Judah Amos Hosea Malachi Zechariah
-            Josiah Jesse Boaz Enoch Moses Tobias Bartholomew Thaddeus Matthias
-            Cornelius Jude Micah Joel Obadiah Nehemiah Zachariah""",
-    },
-    "presidents": {
-        "label": "Presidential",
-        "blurb": "Presidential surnames (and a few famous first names) used as given names.",
-        "names": """Washington Jefferson Madison Monroe Quincy Jackson Tyler Polk
-            Taylor Pierce Buchanan Lincoln Grant Hayes Garfield Arthur Cleveland
-            Harrison McKinley Roosevelt Taft Wilson Harding Coolidge Hoover Truman
-            Kennedy Nixon Ford Carter Reagan Clinton Obama Abraham Theodore
-            Franklin Dwight Lyndon Ronald Woodrow Calvin Ulysses Grover Rutherford
-            Millard Chester Barack""",
-    },
-    "virtue": {
-        "label": "Virtue",
-        "blurb": "Puritan-style virtue names — and their modern revival.",
-        "names": """Faith Hope Charity Grace Patience Prudence Honor Mercy Verity
-            Constance Temperance Felicity Joy Justice Chastity Amity Serenity
-            Harmony Honesty Loyal Noble True Merit Earnest Sincere Glory Bliss
-            Haven Promise Trinity Destiny Genesis Heaven Miracle Blessing""",
-    },
-    "nature": {
-        "label": "Nature & Flowers",
-        "blurb": "Botanical, animal, and landscape names.",
-        "names": """Rose Lily Violet Daisy Iris Ivy Hazel Willow Olive Flora Fern
-            Heather Holly Jasmine Dahlia Poppy Magnolia Laurel Juniper River Skye
-            Forrest Meadow Wren Robin Lark Sage Aspen Cedar Rowan Briar Clover
-            Marigold Azalea Camellia Zinnia Sierra Savannah Autumn Summer Winter
-            Brooke Dawn Rain Sky Ocean Canyon Ridge Stone Reed Heath Glen Cliff
-            Wolf Fox Bear Hawk Colt Buck Birdie Fawn Petal Posey Tulip Lotus
-            Lilac Wisteria Acacia Alder Ash Bay Cypress Elowen Hollis Linden Oakley""",
-    },
-    "gems": {
-        "label": "Gems & Jewels",
-        "blurb": "Precious stones and metals as names.",
-        "names": """Pearl Ruby Opal Jade Amber Coral Crystal Sapphire Emerald
-            Garnet Beryl Jewel Gemma Goldie Silver Sterling Topaz Onyx Jasper
-            Amethyst Diamond Ivory""",
-    },
-    "myth": {
-        "label": "Mythological",
-        "blurb": "Gods, heroes, and legends from Greek, Roman, and Norse mythology.",
-        "names": """Diana Athena Apollo Atlas Orion Luna Aurora Phoenix Penelope
-            Cassandra Daphne Persephone Calliope Thalia Selene Juno Venus Minerva
-            Freya Thor Odin Loki Achilles Hector Jason Perseus Pandora Artemis
-            Echo Iris Hermes Ares Zeus Leda Ajax Ulysses Helen Paris Troy Castor
-            Pollux Maia Rhea Gaia Nyx Clio Aphrodite Adonis Damon Evander Leander
-            Linus Midas Nestor Orpheus Remus Romulus Silas Titan""",
-    },
-    "royal": {
-        "label": "Royal",
-        "blurb": "Names of British monarchs and modern royals.",
-        "names": """Elizabeth Victoria Diana Charlotte George William Harry Henry
-            Charles Philip Anne Margaret Mary Edward Albert Alexandra Catherine
-            Beatrice Eugenie Louis Archie Camilla Eleanor Anna Jane Richard
-            Stephen John James Arthur Alfred Edmund Matilda Adela Cecily""",
-    },
-}
-
-groups_out = {}
-for gid, g in GROUPS.items():
-    members = sorted(set(g["names"].split()))
-    agg = {"F": [0] * NYEARS, "M": [0] * NYEARS}
-    present = []
-    for name in members:
-        if name not in natl:
-            continue
-        present.append(name)
-        for sex, series in natl[name].items():
-            for yi, v in enumerate(series):
-                agg[sex][yi] += v
-    groups_out[gid] = {"label": g["label"], "blurb": g["blurb"],
-                       "names": present, "series": agg}
-dump("groups.json", groups_out)
 
 # ---------------------------------------------------------------- rising / falling
 print("Computing rising & falling names...")

@@ -12,8 +12,22 @@ export async function render(page) {
     el('p', 'lede', 'Not the most <em>common</em> names — the most <em>distinctive</em>. These are the names whose popularity was most concentrated in a single decade relative to their all-time average. The higher the ratio, the more a name screams its era.'),
   );
 
-  const strip = el('div', 'decade-strip');
-  page.append(strip);
+  const slider = el('div', 'decade-slider');
+  const range = document.createElement('input');
+  range.type = 'range';
+  range.min = '1880';
+  range.max = '2020';
+  range.step = '10';
+  range.value = String(decade);
+  range.setAttribute('aria-label', 'Decade');
+  const readout = el('output', 'ds-value', `${decade}s`);
+  slider.append(el('span', 'ds-end', '1880s'), range, el('span', 'ds-end', '2020s'), readout);
+  range.addEventListener('input', () => {
+    decade = +range.value;
+    readout.textContent = `${decade}s`;
+    drawList();
+  });
+  page.append(slider);
 
   const controls = el('div', 'controls');
   const layout = el('div', 'side-layout');
@@ -32,16 +46,6 @@ export async function render(page) {
   });
 
   controls.append(controlGroup('Sex', sexFilter()));
-
-  function drawStrip() {
-    strip.innerHTML = '';
-    for (let d = 1880; d <= 2020; d += 10) {
-      const b = el('button', d === decade ? 'active' : '', `${d}s`);
-      b.onclick = () => { decade = d; drawStrip(); };
-      strip.append(b);
-    }
-    drawList();
-  }
 
   let selected = [];
 
@@ -110,5 +114,5 @@ export async function render(page) {
   }
 
   store.subscribe(() => drawList());
-  drawStrip();
+  drawList();
 }
