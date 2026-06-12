@@ -102,6 +102,74 @@ body {
 }
 .nav-lists:hover { border-color: var(--accent); background: var(--accent-soft); }
 
+/* hamburger + drawer backdrop (mobile only) */
+.nav-toggle { display: none; }
+.nav-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(31, 29, 24, .45);
+  z-index: 210;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+
+@media (max-width: 760px) {
+  .masthead-inner { padding: 14px 18px 8px; align-items: center; }
+  .wordmark { font-size: 28px; }
+  .tagline { display: none; }
+  .nav-toggle {
+    display: block;
+    margin-left: auto;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 4px 11px;
+    font-size: 18px;
+    line-height: 1.3;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .nav-backdrop { display: block; }
+  body.nav-open .nav-backdrop { opacity: 1; pointer-events: auto; }
+  .tabs {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(280px, 82vw);
+    max-width: none;
+    margin: 0;
+    padding: 20px 14px;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: 0 0 48px rgba(40, 32, 16, .2);
+    transform: translateX(-105%);
+    transition: transform .22s ease;
+    z-index: 220;
+  }
+  body.nav-open .tabs { transform: none; }
+  .tabs a {
+    padding: 11px 12px;
+    font-size: 15px;
+    border-bottom: 0;
+    border-left: 3px solid transparent;
+    border-radius: 0 7px 7px 0;
+  }
+  .tabs a.active { border-left-color: var(--accent); background: var(--accent-soft); }
+  .nav-lists {
+    margin: 16px 0 0;
+    align-self: stretch;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+}
+
 /* ---- layout ---- */
 .page {
   max-width: 1120px;
@@ -258,6 +326,8 @@ select.dropdown, input.year-input {
   min-width: 140px;
   padding: 4px;
 }
+.chip.chip-readonly { padding: 4px 11px; }
+.chips-empty { font-size: 13px; color: var(--faint); padding: 2px 4px; }
 .chips-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
 .btn-quiet {
   border: 1px solid var(--line);
