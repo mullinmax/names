@@ -31,7 +31,7 @@ export async function render(page) {
   const [meta, gender] = await Promise.all([getMeta(), getGender()]);
   const chart = lineChart(chartHost, {
     height: 430,
-    yLabel: '% of babies with this name who were girls',
+    yLabel: '% girls',
     tooltipFormat: v => `${Math.round(v)}% girls`,
   });
 
@@ -105,6 +105,10 @@ export async function render(page) {
       xDomain: [1880, 2030],
       yDomain: [0, 100],
       refLines: [{ y: 50, label: '50% — the gender line' }],
+      yEndLabels: [
+        { pos: 'top', text: '♀ all girls', color: 'var(--girl)' },
+        { pos: 'bottom', text: '♂ all boys', color: 'var(--boy)' },
+      ],
     });
   }
 

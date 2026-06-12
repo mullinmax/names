@@ -6,8 +6,9 @@ const W = 975, H = 610;
 
 export async function usMap(container, opts = {}) {
   const topo = await getUSTopo();
+  // continental US only: drop Alaska ('02') and Hawaii ('15')
   const states = topojson.feature(topo, topo.objects.states).features
-    .filter(f => FIPS_TO_POSTAL[f.id]);
+    .filter(f => FIPS_TO_POSTAL[f.id] && f.id !== '02' && f.id !== '15');
   const borders = topojson.mesh(topo, topo.objects.states, (a, b) => a !== b);
   const path = d3.geoPath();
   // the albers atlas is pre-projected to 975x610 matching d3.geoAlbersUsa()

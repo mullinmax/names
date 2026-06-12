@@ -1,19 +1,28 @@
-// Hash router: #/trends, #/maps, ... Each page module exports render(container).
+// Hash router: #/trends, #/regional, ... Each page module exports render(container).
 import { clearSubscribers } from './store.js';
+import { openListsManager } from './ui.js';
 
 const routes = {
   trends: () => import('./pages/trends.js'),
-  maps: () => import('./pages/maps.js'),
-  meanings: () => import('./pages/meanings.js'),
+  regional: () => import('./pages/regional.js'),
+  migration: () => import('./pages/migration.js'),
+  compare: () => import('./pages/compare.js'),
+  presidents: () => import('./pages/presidents.js'),
   rising: () => import('./pages/rising.js'),
   gender: () => import('./pages/gender.js'),
   decades: () => import('./pages/decades.js'),
   wonders: () => import('./pages/wonders.js'),
+  letters: () => import('./pages/letters.js'),
   bigpicture: () => import('./pages/bigpicture.js'),
+  who: () => import('./pages/who.js'),
 };
 
+// old bookmarks
+const aliases = { maps: 'regional', meanings: 'compare' };
+
 async function navigate() {
-  const route = (location.hash.replace(/^#\//, '') || 'trends').split('?')[0];
+  let route = (location.hash.replace(/^#\//, '') || 'trends').split('?')[0];
+  route = aliases[route] || route;
   const loader = routes[route] || routes.trends;
   document.querySelectorAll('#nav a').forEach(a =>
     a.classList.toggle('active', a.dataset.route === (routes[route] ? route : 'trends')));
@@ -34,6 +43,8 @@ async function navigate() {
       <p>${String(err.message || err)}</p></div>`;
   }
 }
+
+document.getElementById('nav-lists').onclick = openListsManager;
 
 addEventListener('hashchange', navigate);
 navigate();

@@ -15,7 +15,6 @@ export const getMeta = () => getJSON('meta.json');
 export const getTop = () => getJSON('top.json');
 export const getRegional = () => getJSON('regional.json');
 export const getMigration = () => getJSON('migration.json');
-export const getGroups = () => getJSON('groups.json');
 export const getRising = () => getJSON('rising.json');
 export const getGender = () => getJSON('gender.json');
 export const getDecades = () => getJSON('decades.json');
@@ -104,6 +103,9 @@ export const STATE_NAMES = {
   UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington',
   WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
 };
+
+// Maps and regional stats cover the continental US only (lower 48 + DC).
+export const CONTINENTAL = Object.keys(STATE_NAMES).filter(s => s !== 'AK' && s !== 'HI');
 
 export const getUSTopo = () =>
   cache.has('__topo')
