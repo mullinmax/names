@@ -127,7 +127,9 @@ body {
 
 /* mobile: slim top bar + slide-in drawer */
 @media (max-width: 760px) {
-  .masthead { position: sticky; top: 0; border-bottom: 1px solid var(--line); }
+  /* z-index above the backdrop: the masthead's stacking context contains the
+     drawer, which must paint over the backdrop, not be greyed by it */
+  .masthead { position: sticky; top: 0; border-bottom: 1px solid var(--line); z-index: 230; }
   .masthead-inner { padding: 14px 18px 10px; align-items: center; }
   .wordmark { font-size: 28px; }
   .tagline { display: none; }
