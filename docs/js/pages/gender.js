@@ -1,7 +1,7 @@
 // Gender Flips: names that crossed (or straddle) the boy–girl line.
 import * as store from '../store.js';
 import { getMeta, getGender, getNameSeries } from '../data.js';
-import { segmented, controlGroup, colorFor, el, nameChips, toast } from '../ui.js';
+import { segmented, controlGroup, colorFor, el, listPicker, toast } from '../ui.js';
 import { lineChart } from '../chart.js';
 
 let category = 'toF';
@@ -17,7 +17,7 @@ export async function render(page) {
     el('p', 'lede', 'Leslie, Ashley, Madison — the traffic across the gender line runs mostly one way. The chart shows the share of each name’s babies who were girls, decade by decade. Above the dashed line, it’s a girls’ name.'),
   );
 
-  page.append(nameChips({ hint: 'Your list is charted too — any name that has been given to both sexes will appear.' }));
+  page.append(listPicker({ hint: 'Your list is charted too — any name that has been given to both sexes will appear.' }));
 
   const controls = el('div', 'controls');
   const layout = el('div', 'side-layout');

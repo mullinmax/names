@@ -2,7 +2,7 @@
 // active list takes over once it has names.
 import * as store from '../store.js';
 import { getMeta, getTop, getYearCounts, toRates } from '../data.js';
-import { nameChips, sexFilter, segmented, controlGroup, colorFor, el, fmt } from '../ui.js';
+import { listPicker, sexFilter, segmented, controlGroup, colorFor, el, fmt } from '../ui.js';
 import { lineChart } from '../chart.js';
 
 let yMode = 'rate'; // 'rate' | 'count' | 'relative'
@@ -13,8 +13,9 @@ export async function render(page) {
     el('p', 'lede', 'Every name tells a story of fashion. Add names to your list to trace them across 145 years — or leave it empty to see the current top 10. Hover the chart for exact values.'),
   );
 
-  const chips = nameChips({});
-  page.append(chips);
+  page.append(listPicker({
+    hint: 'Leave the list empty to see the current top 10 — edit its names via “Edit names…”.',
+  }));
 
   const controls = el('div', 'controls');
   const card = el('div', 'card');
@@ -57,7 +58,7 @@ export async function render(page) {
       ? 'Each line is scaled to that name’s own all-time peak (100%), so a rare name and a megahit share the same axis — you’re comparing when each name trended up or down, not how big it was.'
       : userNames.length
         ? `Showing your ${names.length} name${names.length > 1 ? 's' : ''}. “Per million” adjusts for the size of each year’s birth cohort, so eras are comparable.`
-        : `Showing the top 10 ${sex === 'F' ? 'girls’' : sex === 'M' ? 'boys’' : ''} names of ${meta.yearMax}. Add your own names above to replace this view.`;
+        : `Showing the top 10 ${sex === 'F' ? 'girls’' : sex === 'M' ? 'boys’' : ''} names of ${meta.yearMax}. Pick a list with names above to replace this view.`;
 
     const results = await Promise.all(names.map(n => getYearCounts(n, sex, meta)));
     if (seq !== drawSeq) return; // stale

@@ -153,43 +153,64 @@ function chipsBox(getId, opts = {}) {
   return { root, render };
 }
 
+// Bare dropdown bound to the active list — for compact spots (map pages etc.).
+// Create it once per page render: it subscribes to the page-scoped store.
+export function listSelect() {
+  const select = document.createElement('select');
+  select.className = 'dropdown';
+  select.title = 'Switch the active list';
+  select.onchange = () => store.setActive(select.value);
+  function render() {
+    select.innerHTML = store.getLists().map(l =>
+      `<option value="${esc(l.id)}"${l.id === store.getActiveId() ? ' selected' : ''}>${esc(l.name)} (${l.names.length})</option>`).join('');
+  }
+  render();
+  store.subscribe(render);
+  return select;
+}
+
 /**
  * The shared "name list" component pages embed: shows which list is active,
- * lets you switch lists, edit the active list's names, and open the manager.
- * opts: {hint, showSwatches}
+ * lets you switch lists, and previews its names. All editing happens in the
+ * lists manager dialog. opts: {hint, showSwatches}
  */
-export function nameChips(opts = {}) {
+export function listPicker(opts = {}) {
   const root = el('div', 'namebox');
 
   const head = el('div', 'namebox-head');
   const left = el('div', 'namebox-titlewrap');
   const title = el('span', 'namebox-title', 'Name list');
-  const select = document.createElement('select');
-  select.className = 'dropdown';
-  select.title = 'Switch the active list';
-  select.onchange = () => store.setActive(select.value);
-  const manage = el('button', 'btn-quiet', 'Manage lists…');
-  manage.onclick = openListsManager;
-  left.append(title, select, manage);
+  const select = listSelect();
+  const edit = el('button', 'btn-quiet', 'Edit names…');
+  edit.title = 'Add or remove names in the lists manager';
+  edit.onclick = () => openListsManager(store.getActiveId());
+  left.append(title, select, edit);
   const hint = el('span', 'namebox-hint',
-    opts.hint || 'Type a name and press Enter — the active list follows you across every tab.');
+    opts.hint || 'The active list follows you across every tab — edit it via “Edit names…”.');
   head.append(left, hint);
 
-  const editor = chipsBox(() => store.getActiveId(), opts);
-
-  const actions = el('div', 'chips-actions');
-  const clearBtn = el('button', 'btn-quiet', 'Clear list');
-  clearBtn.onclick = () => store.setNames([]);
-  actions.append(clearBtn);
+  const box = el('div', 'chips chips-readonly');
 
   function render() {
-    const lists = store.getLists();
-    select.innerHTML = lists.map(l =>
-      `<option value="${esc(l.id)}"${l.id === store.getActiveId() ? ' selected' : ''}>${esc(l.name)} (${l.names.length})</option>`).join('');
-    editor.render();
+    box.innerHTML = '';
+    const list = store.getActiveList();
+    if (!list || !list.names.length) {
+      box.append(el('span', 'chips-empty', 'This list is empty — click “Edit names…” to add some.'));
+      return;
+    }
+    list.names.forEach((name, i) => {
+      const chip = el('span', 'chip chip-readonly');
+      if (opts.showSwatches !== false) {
+        const sw = el('span', 'swatch');
+        sw.style.background = colorFor(i);
+        chip.appendChild(sw);
+      }
+      chip.appendChild(document.createTextNode(name));
+      box.append(chip);
+    });
   }
 
-  root.append(head, editor.root, actions);
+  root.append(head, box);
   render();
   store.subscribe(render);
   return root;
@@ -199,7 +220,9 @@ export function nameChips(opts = {}) {
 
 let dlg = null, dlgBody = null, expandedId = null;
 
-export function openListsManager() {
+// Optionally pass a list id to open with that list's name editor expanded.
+export function openListsManager(expandId) {
+  if (typeof expandId === 'string') expandedId = expandId;
   if (!dlg) buildDialog();
   renderDialog();
   dlg.showModal();

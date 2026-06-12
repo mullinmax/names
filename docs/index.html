@@ -13,6 +13,7 @@
   <div class="masthead-inner">
     <a class="wordmark" href="#/trends">Nominal<span class="wordmark-dot">.</span></a>
     <p class="tagline">What 145 years of American baby names reveal</p>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="nav">☰</button>
   </div>
   <nav class="tabs" id="nav">
     <a href="#/trends" data-route="trends">Trends</a>
@@ -31,6 +32,8 @@
   </nav>
 </header>
 
+<div class="nav-backdrop" id="nav-backdrop"></div>
+
 <main id="page" class="page"></main>
 
 <footer class="footer">
@@ -46,6 +49,7 @@
 
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/topojson-client.min.js"></script>
-<script type="module" src="js/main.js"></script>
+<!-- ?v= is stamped with the commit SHA at deploy time (see pages.yml) -->
+<script type="module" src="js/main.js?v=dev"></script>
 </body>
 </html>

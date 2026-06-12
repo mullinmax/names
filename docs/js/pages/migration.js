@@ -1,7 +1,7 @@
 // Migration: names whose geographic center of gravity drifted decade by decade.
 import * as store from '../store.js';
 import { getMeta, getMigration, getNameStateData } from '../data.js';
-import { controlGroup, segmented, el, toast, addButton } from '../ui.js';
+import { controlGroup, segmented, el, toast, addButton, listSelect } from '../ui.js';
 import { usMap } from '../usmap.js';
 
 let direction = 'north';
@@ -46,6 +46,7 @@ export async function render(page) {
 
   const myNamesRow = el('div', 'chips-actions');
   mapCard.append(myNamesRow);
+  const myListSelect = listSelect(); // created once — reused on every redraw
 
   function drawList() {
     const entries = migration[direction];
@@ -86,9 +87,12 @@ export async function render(page) {
 
   function drawMyNames() {
     myNamesRow.innerHTML = '';
+    myNamesRow.append(el('span', 'control-label', 'Trace one of yours:'), myListSelect);
     const names = store.getNames();
-    if (!names.length) return;
-    myNamesRow.append(el('span', 'control-label', 'Trace one of yours:'));
+    if (!names.length) {
+      myNamesRow.append(el('span', 'namebox-hint', 'This list is empty — add names via “My Lists”.'));
+      return;
+    }
     names.forEach(n => {
       const b = el('button', 'btn-quiet', n);
       b.onclick = () => traceCustom(n);

@@ -2,25 +2,32 @@
 import { clearSubscribers } from './store.js';
 import { openListsManager } from './ui.js';
 
+// Propagate the cache-busting version on js/main.js?v=… (stamped at deploy
+// time) to the dynamically imported pages, so a fresh router never pairs
+// with stale page modules.
+const V = new URL(import.meta.url).searchParams.get('v');
+const load = name => import(`./pages/${name}.js${V ? `?v=${V}` : ''}`);
+
 const routes = {
-  trends: () => import('./pages/trends.js'),
-  regional: () => import('./pages/regional.js'),
-  migration: () => import('./pages/migration.js'),
-  compare: () => import('./pages/compare.js'),
-  presidents: () => import('./pages/presidents.js'),
-  rising: () => import('./pages/rising.js'),
-  gender: () => import('./pages/gender.js'),
-  decades: () => import('./pages/decades.js'),
-  wonders: () => import('./pages/wonders.js'),
-  letters: () => import('./pages/letters.js'),
-  bigpicture: () => import('./pages/bigpicture.js'),
-  who: () => import('./pages/who.js'),
+  trends: () => load('trends'),
+  regional: () => load('regional'),
+  migration: () => load('migration'),
+  compare: () => load('compare'),
+  presidents: () => load('presidents'),
+  rising: () => load('rising'),
+  gender: () => load('gender'),
+  decades: () => load('decades'),
+  wonders: () => load('wonders'),
+  letters: () => load('letters'),
+  bigpicture: () => load('bigpicture'),
+  who: () => load('who'),
 };
 
 // old bookmarks
 const aliases = { maps: 'regional', meanings: 'compare' };
 
 async function navigate() {
+  setMenu(false);
   let route = (location.hash.replace(/^#\//, '') || 'trends').split('?')[0];
   route = aliases[route] || route;
   const loader = routes[route] || routes.trends;
@@ -44,7 +51,21 @@ async function navigate() {
   }
 }
 
-document.getElementById('nav-lists').onclick = openListsManager;
+document.getElementById('nav-lists').onclick = () => openListsManager();
+
+// Mobile: the nav becomes a slide-in side menu behind a hamburger button.
+const navToggle = document.getElementById('nav-toggle');
+function setMenu(open) {
+  document.body.classList.toggle('nav-open', open);
+  navToggle.setAttribute('aria-expanded', String(open));
+}
+navToggle.onclick = () => setMenu(!document.body.classList.contains('nav-open'));
+document.getElementById('nav-backdrop').onclick = () => setMenu(false);
+// Close the menu on any nav choice — including re-clicking the current tab,
+// which doesn't fire hashchange.
+document.getElementById('nav').addEventListener('click', e => {
+  if (e.target.closest('a, button')) setMenu(false);
+});
 
 addEventListener('hashchange', navigate);
 navigate();
