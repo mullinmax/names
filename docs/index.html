@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nominal — 145 years of American baby names</title>
+<meta name="description" content="Interactive visualizations of the Social Security Administration baby names database, 1880–2025.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80' font-family='Georgia'>N</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="masthead">
+  <div class="masthead-inner">
+    <a class="wordmark" href="#/trends">Nominal<span class="wordmark-dot">.</span></a>
+    <p class="tagline">What 145 years of American baby names reveal</p>
+  </div>
+  <nav class="tabs" id="nav">
+    <a href="#/trends" data-route="trends">Trends</a>
+    <a href="#/maps" data-route="maps">Maps</a>
+    <a href="#/meanings" data-route="meanings">Meanings</a>
+    <a href="#/rising" data-route="rising">Up &amp; Coming</a>
+    <a href="#/gender" data-route="gender">Gender Flips</a>
+    <a href="#/decades" data-route="decades">Decades</a>
+    <a href="#/wonders" data-route="wonders">One-Hit Wonders</a>
+    <a href="#/bigpicture" data-route="bigpicture">Big Picture</a>
+  </nav>
+</header>
+
+<main id="page" class="page"></main>
+
+<footer class="footer">
+  <p><strong>Nominal</strong> &middot; Source: U.S. Social Security Administration baby-name
+  applications, 1880&ndash;2025 (national) and 1910&ndash;2025 (by state).
+  Names with fewer than 5 occurrences in a year are excluded by the SSA for privacy.
+  Rates are per million births of the selected sex recorded that year.</p>
+</footer>
+
+<div id="tooltip" class="tooltip" hidden></div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="vendor/d3.min.js"></script>
+<script src="vendor/topojson-client.min.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
