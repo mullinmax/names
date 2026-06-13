@@ -16,6 +16,7 @@ export const getTop = () => getJSON('top.json');
 export const getRegional = () => getJSON('regional.json');
 export const getMigration = () => getJSON('migration.json');
 export const getRising = () => getJSON('rising.json');
+export const getStability = () => getJSON('stability.json');
 export const getGender = () => getJSON('gender.json');
 export const getDecades = () => getJSON('decades.json');
 export const getWonders = () => getJSON('wonders.json');
