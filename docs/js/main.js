@@ -15,6 +15,7 @@ const routes = {
   compare: () => load('compare'),
   presidents: () => load('presidents'),
   rising: () => load('rising'),
+  stability: () => load('stability'),
   gender: () => load('gender'),
   decades: () => load('decades'),
   wonders: () => load('wonders'),

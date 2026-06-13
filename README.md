@@ -8,7 +8,7 @@ state-level 1910–2025).
 
 ## The site
 
-Twelve interactive views, all sharing one set of persistent, named **name
+Thirteen interactive views, all sharing one set of persistent, named **name
 lists** (kept in your browser's local storage). The "My Lists" manager in the
 navigation creates, renames, edits, copies, and deletes lists; the built-in
 lists (Biblical, Presidential, Virtue…) are ordinary lists seeded by default,
@@ -22,6 +22,7 @@ and every page works off whichever list is active.
 | **Compare Lists** | Any of your name lists charted against each other (share of births or % of each list's own peak) |
 | **Presidents** | Presidential names aligned on each president's first inauguration (year 0) and normalized — did taking office boost or sink the name? |
 | **Up & Coming** | Breakout, surging, and fading names of the last few years |
+| **Stable & Volatile** | Steadiest perennials (names that always hold the same share of births) vs. the most volatile boom-and-bust names, ranked by how much their share swings over 145 years |
 | **Gender Flips** | Names that crossed the boy–girl line (Leslie, Ashley, Madison…), per-decade % girls, with ♀/♂ poles labeled |
 | **Decades** | The most distinctively *of-their-decade* names, 1880s–2020s, picked with a slider |
 | **One-Hit Wonders** | Names that spiked and vanished, with pop-culture annotations |

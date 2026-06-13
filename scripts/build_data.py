@@ -13,6 +13,7 @@ Outputs (docs/data/):
   regional.json        most/least regional names per window
   migration.json       biggest centroid movers per compass direction
   rising.json          fastest rising / falling names
+  stability.json       steadiest / most volatile names by share-of-births
   gender.json          notable gender-shift names
   decades.json         signature names per decade
   wonders.json         one-hit wonder spikes (+ pop-culture annotations)
@@ -329,6 +330,43 @@ for sex in rising:
         rising[sex][key] = [{"name": n, "growth": round(g, 2), "count": c, "rate": r}
                             for g, n, c, r in rising[sex][key][:40]]
 dump("rising.json", rising)
+
+# ---------------------------------------------------------------- stability
+# How steadily does a name hold its slice of the population? Score each name by
+# the coefficient of variation (std/mean) of its per-million rate across all 146
+# years. Low CV = a perennial that always claims roughly the same share; high CV
+# = a name that boomed and busted (or only just arrived) — it "cycles" instead of
+# holding steady.
+print("Computing name stability...")
+STAB_MIN_TOTAL = 50000  # only names with a real, sustained footprint
+stability = {"F": {"stable": [], "volatile": []},
+             "M": {"stable": [], "volatile": []}}
+for name in ALL_NAMES:
+    for sex, series in natl[name].items():
+        total = sum(series)
+        if total < STAB_MIN_TOTAL:
+            continue
+        rates = [rate(name, sex, yi) for yi in range(NYEARS)]
+        mean = sum(rates) / NYEARS
+        if mean <= 0:
+            continue
+        var = sum((r - mean) ** 2 for r in rates) / NYEARS
+        cv = math.sqrt(var) / mean
+        peak_yi = max(range(NYEARS), key=lambda i: rates[i])
+        entry = (cv, name, round(mean, 1), round(rates[peak_yi], 1),
+                 YEAR_MIN + peak_yi, total)
+        stability[sex]["stable"].append(entry)
+        stability[sex]["volatile"].append(entry)
+
+for sex in stability:
+    stability[sex]["stable"].sort()             # lowest CV first
+    stability[sex]["volatile"].sort(reverse=True)  # highest CV first
+    for key in ("stable", "volatile"):
+        stability[sex][key] = [
+            {"name": n, "cv": round(cv, 3), "mean": m, "peak": pk,
+             "peakYear": py, "total": t}
+            for cv, n, m, pk, py, t in stability[sex][key][:40]]
+dump("stability.json", stability)
 
 # ---------------------------------------------------------------- gender shifts
 print("Computing gender shifts...")
